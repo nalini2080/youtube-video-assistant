@@ -3,21 +3,23 @@ import { checkHealth } from './api/health'
 import { analyzeVideo } from './api/videos'
 import { fetchTranscript } from './api/transcript'
 import { fetchChunks } from './api/chunks'
+import { fetchSummary } from './api/summary'
+import { fetchRelevance } from './api/relevance'
+import { UrlInputForm } from './components/UrlInputForm'
+import { EmptyState } from './components/EmptyState'
+import { VideoMetadataCard } from './components/VideoMetadataCard'
+import { TranscriptStatus } from './components/TranscriptStatus'
+import { SummaryCard } from './components/SummaryCard'
+import { RelevanceCard } from './components/RelevanceCard'
 import type { VideoMetadata } from './types/video'
 import type { TranscriptResponse } from './types/transcript'
 import type { TranscriptChunk } from './types/chunk'
-
-function formatDuration(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${seconds}s`
-  return `${seconds}s`
-}
+import type { VideoSummary } from './types/summary'
+import type { RelevanceResult } from './types/relevance'
 
 function App() {
   const [url, setUrl] = useState('')
+  const [query, setQuery] = useState('')
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +28,12 @@ function App() {
   const [transcriptLoading, setTranscriptLoading] = useState(false)
   const [chunks, setChunks] = useState<TranscriptChunk[] | null>(null)
   const [chunksLoading, setChunksLoading] = useState(false)
+  const [summary, setSummary] = useState<VideoSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [relevance, setRelevance] = useState<RelevanceResult | null>(null)
+  const [relevanceLoading, setRelevanceLoading] = useState(false)
+  const [relevanceError, setRelevanceError] = useState<string | null>(null)
 
   useEffect(() => {
     checkHealth()
@@ -38,11 +46,17 @@ function App() {
     setVideo(null)
     setTranscript(null)
     setChunks(null)
+    setSummary(null)
+    setSummaryError(null)
+    setRelevance(null)
+    setRelevanceError(null)
 
     if (!url.trim()) {
       setError('Please paste a YouTube URL first.')
       return
     }
+
+    const trimmedQuery = query.trim()
 
     setLoading(true)
     try {
@@ -59,6 +73,24 @@ function App() {
               .then(setChunks)
               .catch(() => setChunks(null))
               .finally(() => setChunksLoading(false))
+
+            setSummaryLoading(true)
+            fetchSummary(result.video_id)
+              .then(setSummary)
+              .catch((err) =>
+                setSummaryError(err instanceof Error ? err.message : 'Failed to generate summary.')
+              )
+              .finally(() => setSummaryLoading(false))
+
+            if (trimmedQuery) {
+              setRelevanceLoading(true)
+              fetchRelevance(result.video_id, trimmedQuery)
+                .then(setRelevance)
+                .catch((err) =>
+                  setRelevanceError(err instanceof Error ? err.message : 'Failed to analyze relevance.')
+                )
+                .finally(() => setRelevanceLoading(false))
+            }
           }
         })
         .catch(() => setTranscript(null))
@@ -70,91 +102,59 @@ function App() {
     }
   }
 
+  const hasResults = video !== null
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-16">
-      <div className="w-full max-w-xl text-center">
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">VideoLens</h1>
-        <p className="text-slate-600 mb-8">
-          Understand YouTube videos before watching.
-        </p>
+      <div className="w-full max-w-xl">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">VideoLens</h1>
+          <p className="text-slate-600 mb-8">
+            Understand YouTube videos before watching.
+          </p>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste YouTube URL here"
-            className="flex-1 px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          <UrlInputForm
+            url={url}
+            onUrlChange={setUrl}
+            query={query}
+            onQueryChange={setQuery}
+            onSubmit={handleAnalyze}
+            loading={loading}
           />
-          <button
-            onClick={handleAnalyze}
-            disabled={loading}
-            className="px-6 py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-700 transition disabled:opacity-50"
-          >
-            {loading ? 'Analyzing...' : 'Analyze'}
-          </button>
+
+          <p className="mt-4 text-sm text-slate-400">
+            Backend status:{' '}
+            {backendStatus === 'checking' && 'checking...'}
+            {backendStatus === 'ok' && <span className="text-green-600">connected ✓</span>}
+            {backendStatus === 'error' && <span className="text-red-500">not reachable ✗</span>}
+          </p>
+
+          {error && (
+            <p className="mt-6 text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">
+              {error}
+            </p>
+          )}
         </div>
 
-        <p className="mt-4 text-sm text-slate-400">
-          Backend status:{' '}
-          {backendStatus === 'checking' && 'checking...'}
-          {backendStatus === 'ok' && <span className="text-green-600">connected ✓</span>}
-          {backendStatus === 'error' && <span className="text-red-500">not reachable ✗</span>}
-        </p>
-
-        {error && (
-          <p className="mt-6 text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">
-            {error}
-          </p>
-        )}
+        {!hasResults && !loading && !error && <EmptyState />}
 
         {video && (
-          <div className="mt-8 text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <img src={video.thumbnail_url} alt={video.title} className="w-full" />
-            <div className="p-5">
-              <h2 className="text-lg font-semibold text-slate-900">{video.title}</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                {video.channel} • {formatDuration(video.duration_seconds)}
-              </p>
-              <p className="text-sm text-slate-700 mt-3 line-clamp-4">
-                {video.description}
-              </p>
-            </div>
-          </div>
-        )}
+          <div className="mt-8 space-y-4">
+            {(relevance || relevanceLoading || relevanceError) && (
+              <RelevanceCard loading={relevanceLoading} error={relevanceError} relevance={relevance} />
+            )}
 
-        {video && (
-          <div className="mt-4 text-left bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">Transcript</h3>
-            {transcriptLoading && (
-              <p className="text-sm text-slate-400">Checking for a transcript...</p>
-            )}
-            {!transcriptLoading && transcript?.available && (
-              <div className="text-sm text-green-700">
-                <p>
-                  Available — {transcript.snippets.length} segments
-                  {transcript.language ? ` (${transcript.language})` : ''}
-                  {transcript.is_generated ? ', auto-generated' : ''}
-                </p>
-                {chunksLoading && (
-                  <p className="text-slate-400 mt-1">Chunking transcript...</p>
-                )}
-                {!chunksLoading && chunks && (
-                  <p className="text-slate-600 mt-1">
-                    Grouped into {chunks.length} chunks (~
-                    {Math.round(
-                      chunks.reduce((sum, c) => sum + (c.end_time - c.start_time), 0) /
-                      chunks.length
-                    )}
-                    s avg. length)
-                  </p>
-                )}
-              </div>
-            )}
-            {!transcriptLoading && transcript && !transcript.available && (
-              <p className="text-sm text-amber-700">
-                Not available — {transcript.reason}
-              </p>
+            <VideoMetadataCard video={video} />
+
+            <TranscriptStatus
+              loading={transcriptLoading}
+              transcript={transcript}
+              chunks={chunks}
+              chunksLoading={chunksLoading}
+            />
+
+            {transcript?.available && (
+              <SummaryCard loading={summaryLoading} error={summaryError} summary={summary} />
             )}
           </div>
         )}

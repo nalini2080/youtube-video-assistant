@@ -11,9 +11,10 @@ class Settings(BaseSettings):
     # CORS
     frontend_origin: str = "http://localhost:5173"
 
-    # Will be used starting Phase 2+ — defined now so the pattern is established
+    # External services
     youtube_api_key: str = ""
     openai_api_key: str = ""
+    openai_model: str = "gpt-5-mini"
     database_url: str = ""
 
 
