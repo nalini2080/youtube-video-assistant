@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { checkHealth } from './api/health'
 import { analyzeVideo } from './api/videos'
 import { fetchTranscript } from './api/transcript'
+import { fetchChunks } from './api/chunks'
 import type { VideoMetadata } from './types/video'
 import type { TranscriptResponse } from './types/transcript'
+import type { TranscriptChunk } from './types/chunk'
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600)
@@ -22,6 +24,8 @@ function App() {
   const [video, setVideo] = useState<VideoMetadata | null>(null)
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null)
   const [transcriptLoading, setTranscriptLoading] = useState(false)
+  const [chunks, setChunks] = useState<TranscriptChunk[] | null>(null)
+  const [chunksLoading, setChunksLoading] = useState(false)
 
   useEffect(() => {
     checkHealth()
@@ -33,6 +37,7 @@ function App() {
     setError(null)
     setVideo(null)
     setTranscript(null)
+    setChunks(null)
 
     if (!url.trim()) {
       setError('Please paste a YouTube URL first.')
@@ -46,7 +51,16 @@ function App() {
 
       setTranscriptLoading(true)
       fetchTranscript(result.video_id)
-        .then(setTranscript)
+        .then((t) => {
+          setTranscript(t)
+          if (t.available) {
+            setChunksLoading(true)
+            fetchChunks(result.video_id)
+              .then(setChunks)
+              .catch(() => setChunks(null))
+              .finally(() => setChunksLoading(false))
+          }
+        })
         .catch(() => setTranscript(null))
         .finally(() => setTranscriptLoading(false))
     } catch (err) {
@@ -116,11 +130,26 @@ function App() {
               <p className="text-sm text-slate-400">Checking for a transcript...</p>
             )}
             {!transcriptLoading && transcript?.available && (
-              <p className="text-sm text-green-700">
-                Available — {transcript.snippets.length} segments
-                {transcript.language ? ` (${transcript.language})` : ''}
-                {transcript.is_generated ? ', auto-generated' : ''}
-              </p>
+              <div className="text-sm text-green-700">
+                <p>
+                  Available — {transcript.snippets.length} segments
+                  {transcript.language ? ` (${transcript.language})` : ''}
+                  {transcript.is_generated ? ', auto-generated' : ''}
+                </p>
+                {chunksLoading && (
+                  <p className="text-slate-400 mt-1">Chunking transcript...</p>
+                )}
+                {!chunksLoading && chunks && (
+                  <p className="text-slate-600 mt-1">
+                    Grouped into {chunks.length} chunks (~
+                    {Math.round(
+                      chunks.reduce((sum, c) => sum + (c.end_time - c.start_time), 0) /
+                      chunks.length
+                    )}
+                    s avg. length)
+                  </p>
+                )}
+              </div>
             )}
             {!transcriptLoading && transcript && !transcript.available && (
               <p className="text-sm text-amber-700">

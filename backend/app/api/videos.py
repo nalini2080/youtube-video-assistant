@@ -1,7 +1,10 @@
+from typing import List
+
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.video import VideoAnalyzeRequest, VideoMetadata
 from app.schemas.transcript import TranscriptResponse
+from app.schemas.chunk import TranscriptChunk
 from app.utils.youtube_url import extract_video_id, InvalidYouTubeURLError
 from app.services.youtube_service import (
     fetch_video_metadata,
@@ -9,6 +12,7 @@ from app.services.youtube_service import (
     VideoNotFoundError,
 )
 from app.services.transcript_service import fetch_transcript
+from app.services.chunking_service import chunk_transcript
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -33,3 +37,14 @@ async def analyze_video(request: VideoAnalyzeRequest):
 @router.get("/{video_id}/transcript", response_model=TranscriptResponse)
 def get_transcript(video_id: str):
     return fetch_transcript(video_id)
+
+
+@router.get("/{video_id}/chunks", response_model=List[TranscriptChunk])
+def get_transcript_chunks(video_id: str):
+    transcript = fetch_transcript(video_id)
+    if not transcript.available:
+        raise HTTPException(
+            status_code=404,
+            detail=transcript.reason or "Transcript not available",
+        )
+    return chunk_transcript(video_id, transcript.snippets)
