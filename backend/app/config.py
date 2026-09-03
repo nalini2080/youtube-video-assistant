@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+
 class Settings(BaseSettings):
     """
     Centralized app configuration, loaded from environment variables
@@ -13,9 +14,10 @@ class Settings(BaseSettings):
 
     # External services
     youtube_api_key: str = ""
-    openai_api_key: str = ""
-    openai_model: str = "gpt-5-mini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-lite"
     database_url: str = ""
+    gemini_embedding_model: str = "gemini-embedding-001"
 
 
 settings = Settings()

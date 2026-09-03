@@ -1,11 +1,13 @@
 import type { TranscriptResponse } from '../types/transcript'
 import type { TranscriptChunk } from '../types/chunk'
+import type { EmbeddingStatus } from '../types/embedding'
 
 interface TranscriptStatusProps {
     loading: boolean
     transcript: TranscriptResponse | null
     chunks: TranscriptChunk[] | null
     chunksLoading: boolean
+    embeddingStatus: EmbeddingStatus | null
 }
 
 export function TranscriptStatus({
@@ -13,6 +15,7 @@ export function TranscriptStatus({
     transcript,
     chunks,
     chunksLoading,
+    embeddingStatus,
 }: TranscriptStatusProps) {
     return (
         <div className="text-left bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
@@ -35,6 +38,11 @@ export function TranscriptStatus({
                                 chunks.reduce((sum, c) => sum + (c.end_time - c.start_time), 0) / chunks.length
                             )}
                             s avg. length)
+                        </p>
+                    )}
+                    {embeddingStatus && (
+                        <p className="text-slate-600 mt-1">
+                            Embedded {embeddingStatus.embedded_chunks}/{embeddingStatus.total_chunks} chunks for search
                         </p>
                     )}
                 </div>
