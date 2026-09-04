@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash-lite"
     database_url: str = ""
     gemini_embedding_model: str = "gemini-embedding-001"
+    clerk_secret_key: str = ""
 
 
 settings = Settings()

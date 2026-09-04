@@ -31,6 +31,9 @@ from app.services.ai_service import (
     AIPersonalizedSummaryError,
     AIChatError,
 )
+from typing import Optional
+from app.schemas.history import SavedVideoItem, QueryHistoryItem, HistoryResponse
+from app.services.auth_service import get_optional_user_id, require_user_id
 from app.services.embedding_service import generate_embeddings_for_chunks, AIEmbeddingError
 from app.services import video_repository as repo
 
@@ -132,7 +135,7 @@ async def get_video_summary(video_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{video_id}/relevance", response_model=RelevanceResult)
 async def get_video_relevance(
-    video_id: str, request: RelevanceRequest, db: AsyncSession = Depends(get_db)
+    video_id: str, request: RelevanceRequest, user_id: Optional[str] = Depends(get_optional_user_id), db: AsyncSession = Depends(get_db)
 ):
     video_record = await _get_or_create_video_record(db, video_id)
     records = await _get_or_create_chunk_records(db, video_record, video_id)
@@ -152,7 +155,7 @@ async def get_video_relevance(
 
 @router.post("/{video_id}/personalized-summary", response_model=PersonalizedSummaryResult)
 async def get_personalized_summary(
-    video_id: str, request: RelevanceRequest, db: AsyncSession = Depends(get_db)
+    video_id: str, request: RelevanceRequest, user_id: Optional[str] = Depends(get_optional_user_id), db: AsyncSession = Depends(get_db)
 ):
     video_record = await _get_or_create_video_record(db, video_id)
     records = await _get_or_create_chunk_records(db, video_record, video_id)
@@ -187,7 +190,7 @@ async def get_video_embeddings(video_id: str, db: AsyncSession = Depends(get_db)
     return EmbeddingStatus(video_id=video_id, total_chunks=len(records), embedded_chunks=embedded_count)
 
 @router.post("/{video_id}/chat", response_model=ChatResponse)
-async def chat_with_video(video_id: str, request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat_with_video(video_id: str, request: ChatRequest, user_id: Optional[str] = Depends(get_optional_user_id), db: AsyncSession = Depends(get_db)):
     video_record = await _get_or_create_video_record(db, video_id)
     records = await _get_or_create_chunk_records(db, video_record, video_id)
 
@@ -217,3 +220,50 @@ async def chat_with_video(video_id: str, request: ChatRequest, db: AsyncSession 
     )
 
     return response
+
+@router.post("/{video_id}/save")
+async def save_video(
+    video_id: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(require_user_id),
+):
+    video_record = await _get_or_create_video_record(db, video_id)
+    await repo.save_video_for_user(db, user_id, video_record.id)
+    return {"saved": True}
+
+
+@router.delete("/{video_id}/save")
+async def unsave_video(
+    video_id: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(require_user_id),
+):
+    video_record = await _get_or_create_video_record(db, video_id)
+    await repo.unsave_video_for_user(db, user_id, video_record.id)
+    return {"saved": False}
+
+
+@router.get("/history", response_model=HistoryResponse)
+async def get_history(
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(require_user_id),
+):
+    saved_rows = await repo.get_saved_videos_for_user(db, user_id)
+    saved_videos = [
+        SavedVideoItem(video=repo.video_record_to_metadata(v), saved_at=sv.saved_at.isoformat())
+        for sv, v in saved_rows
+    ]
+
+    query_rows = await repo.get_recent_queries_for_user(db, user_id)
+    recent_queries = [
+        QueryHistoryItem(
+            video_id=youtube_id,
+            query=q.query,
+            relevance_score=q.relevance_score,
+            answer=q.answer,
+            created_at=q.created_at.isoformat(),
+        )
+        for q, youtube_id in query_rows
+    ]
+
+    return HistoryResponse(saved_videos=saved_videos, recent_queries=recent_queries)

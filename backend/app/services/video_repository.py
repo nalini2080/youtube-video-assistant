@@ -10,6 +10,7 @@ from app.models.user_query import UserQueryRecord
 from app.schemas.video import VideoMetadata
 from app.schemas.chunk import TranscriptChunk
 from app.schemas.summary import VideoSummary
+from app.models.saved_video import SavedVideoRecord
 
 
 async def get_video_by_youtube_id(db: AsyncSession, youtube_id: str) -> Optional[VideoRecord]:
@@ -116,12 +117,14 @@ async def log_user_query(
     query: str,
     relevance_score: Optional[float] = None,
     answer: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> UserQueryRecord:
     record = UserQueryRecord(
         video_id=video_record_id,
         query=query,
         relevance_score=relevance_score,
         answer=answer,
+        user_id=user_id,
     )
     db.add(record)
     await db.commit()
@@ -148,3 +151,47 @@ async def vector_search_chunks(
         .limit(top_k)
     )
     return list(result.scalars().all())
+
+async def save_video_for_user(db: AsyncSession, user_id: str, video_record_id: int) -> None:
+    existing = await db.execute(
+        select(SavedVideoRecord).where(
+            SavedVideoRecord.user_id == user_id, SavedVideoRecord.video_id == video_record_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+    db.add(SavedVideoRecord(user_id=user_id, video_id=video_record_id))
+    await db.commit()
+
+
+async def unsave_video_for_user(db: AsyncSession, user_id: str, video_record_id: int) -> None:
+    result = await db.execute(
+        select(SavedVideoRecord).where(
+            SavedVideoRecord.user_id == user_id, SavedVideoRecord.video_id == video_record_id
+        )
+    )
+    record = result.scalar_one_or_none()
+    if record:
+        await db.delete(record)
+        await db.commit()
+
+
+async def get_saved_videos_for_user(db: AsyncSession, user_id: str):
+    result = await db.execute(
+        select(SavedVideoRecord, VideoRecord)
+        .join(VideoRecord, SavedVideoRecord.video_id == VideoRecord.id)
+        .where(SavedVideoRecord.user_id == user_id)
+        .order_by(SavedVideoRecord.saved_at.desc())
+    )
+    return result.all()
+
+
+async def get_recent_queries_for_user(db: AsyncSession, user_id: str, limit: int = 20):
+    result = await db.execute(
+        select(UserQueryRecord, VideoRecord.youtube_id)
+        .join(VideoRecord, UserQueryRecord.video_id == VideoRecord.id)
+        .where(UserQueryRecord.user_id == user_id)
+        .order_by(UserQueryRecord.created_at.desc())
+        .limit(limit)
+    )
+    return result.all()

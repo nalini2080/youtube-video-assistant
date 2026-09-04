@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
 import { checkHealth } from './api/health'
 import { analyzeVideo } from './api/videos'
 import { fetchTranscript } from './api/transcript'
@@ -15,6 +16,8 @@ import { SummaryCard } from './components/SummaryCard'
 import { RelevanceCard } from './components/RelevanceCard'
 import { PersonalizedSummaryCard } from './components/PersonalizedSummaryCard'
 import { ChatPanel } from './components/ChatPanel'
+import { SaveVideoButton } from './components/SaveVideoButton'
+import { HistoryPanel } from './components/HistoryPanel'
 import type { VideoMetadata } from './types/video'
 import type { TranscriptResponse } from './types/transcript'
 import type { TranscriptChunk } from './types/chunk'
@@ -51,7 +54,9 @@ function App() {
       .catch(() => setBackendStatus('error'))
   }, [])
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (overrideUrl?: string) => {
+    const targetUrl = overrideUrl ?? url
+
     setError(null)
     setVideo(null)
     setTranscript(null)
@@ -64,7 +69,7 @@ function App() {
     setPersonalizedSummary(null)
     setPersonalizedSummaryError(null)
 
-    if (!url.trim()) {
+    if (!targetUrl.trim()) {
       setError('Please paste a YouTube URL first.')
       return
     }
@@ -73,7 +78,7 @@ function App() {
 
     setLoading(true)
     try {
-      const result = await analyzeVideo(url.trim())
+      const result = await analyzeVideo(targetUrl.trim())
       setVideo(result)
 
       setTranscriptLoading(true)
@@ -129,23 +134,43 @@ function App() {
     }
   }
 
+  const handleSelectFromHistory = (youtubeUrl: string) => {
+    setUrl(youtubeUrl)
+    handleAnalyze(youtubeUrl)
+  }
+
   const hasResults = video !== null
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-16">
       <div className="w-full max-w-xl">
+        <div className="flex justify-end mb-2">
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="text-sm text-slate-600 hover:text-slate-900">Sign in</button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+        </div>
+
         <div className="text-center">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">VideoLens</h1>
-          <p className="text-slate-600 mb-8">
+          <p className="text-slate-600 mb-6">
             Understand YouTube videos before watching.
           </p>
+
+          <SignedIn>
+            <HistoryPanel onSelectVideo={handleSelectFromHistory} />
+          </SignedIn>
 
           <UrlInputForm
             url={url}
             onUrlChange={setUrl}
             query={query}
             onQueryChange={setQuery}
-            onSubmit={handleAnalyze}
+            onSubmit={() => handleAnalyze()}
             loading={loading}
           />
 
@@ -184,6 +209,10 @@ function App() {
                 videoId={video.video_id}
               />
             )}
+
+            <div className="flex justify-end">
+              <SaveVideoButton videoId={video.video_id} />
+            </div>
 
             <VideoMetadataCard video={video} />
 

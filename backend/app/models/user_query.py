@@ -3,6 +3,7 @@ from typing import Optional
 
 from sqlalchemy import ForeignKey, Text, Float, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, Text, Float, DateTime, String
 
 from app.database import Base
 
@@ -20,3 +21,4 @@ class UserQueryRecord(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+    user_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
