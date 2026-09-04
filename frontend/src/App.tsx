@@ -25,6 +25,7 @@ import type { VideoSummary } from './types/summary'
 import type { RelevanceResult } from './types/relevance'
 import type { PersonalizedSummaryResult } from './types/personalizedSummary'
 import type { EmbeddingStatus } from './types/embedding'
+import { SuggestionsCard } from './components/SuggestionsCard'
 
 function App() {
   const [url, setUrl] = useState('')
@@ -199,6 +200,9 @@ function App() {
                 relevance={relevance}
                 videoId={video.video_id}
               />
+            )}
+            {relevance && relevance.missing_topics.length > 0 && (
+              <SuggestionsCard videoId={video.video_id} missingTopics={relevance.missing_topics} />
             )}
 
             {(personalizedSummary || personalizedSummaryLoading || personalizedSummaryError) && (

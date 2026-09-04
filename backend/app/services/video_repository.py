@@ -11,6 +11,10 @@ from app.schemas.video import VideoMetadata
 from app.schemas.chunk import TranscriptChunk
 from app.schemas.summary import VideoSummary
 from app.models.saved_video import SavedVideoRecord
+from datetime import date as date_type
+from app.models.search_quota import SearchQuotaRecord
+
+DAILY_SEARCH_LIMIT = 3
 
 
 async def get_video_by_youtube_id(db: AsyncSession, youtube_id: str) -> Optional[VideoRecord]:
@@ -195,3 +199,26 @@ async def get_recent_queries_for_user(db: AsyncSession, user_id: str, limit: int
         .limit(limit)
     )
     return result.all()
+
+async def try_consume_search_quota(db: AsyncSession) -> bool:
+    """
+    Attempts to reserve one YouTube search.list call against today's quota.
+    Returns True and increments the counter if under the daily limit,
+    False (without calling YouTube) if today's limit is already used up.
+    """
+    today = date_type.today()
+    result = await db.execute(
+        select(SearchQuotaRecord).where(SearchQuotaRecord.quota_date == today)
+    )
+    record = result.scalar_one_or_none()
+
+    if record is None:
+        record = SearchQuotaRecord(quota_date=today, count=0)
+        db.add(record)
+
+    if record.count >= DAILY_SEARCH_LIMIT:
+        return False
+
+    record.count += 1
+    await db.commit()
+    return True

@@ -43,6 +43,8 @@ from app.services.embedding_service import (
     embed_query_text,
     AIEmbeddingError,
 )
+from app.schemas.suggestion import SuggestionsRequest, SuggestedVideo, SuggestionsResponse
+from app.services.youtube_service import search_videos
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -267,3 +269,28 @@ async def get_history(
     ]
 
     return HistoryResponse(saved_videos=saved_videos, recent_queries=recent_queries)
+
+MAX_SUGGESTION_TOPICS = 1
+RESULTS_PER_TOPIC = 3
+
+
+@router.post("/{video_id}/suggestions", response_model=SuggestionsResponse)
+async def get_video_suggestions(
+    video_id: str, request: SuggestionsRequest, db: AsyncSession = Depends(get_db)
+):
+    topics = request.topics[:MAX_SUGGESTION_TOPICS]
+    if not topics:
+        return SuggestionsResponse(suggestions=[])
+
+    allowed = await repo.try_consume_search_quota(db)
+    if not allowed:
+        return SuggestionsResponse(suggestions=[], quota_exceeded=True)
+
+    topic = topics[0]
+    try:
+        results = await search_videos(topic, max_results=RESULTS_PER_TOPIC, exclude_video_id=video_id)
+    except YouTubeAPIError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    suggestions = [SuggestedVideo(topic=topic, **r) for r in results]
+    return SuggestionsResponse(suggestions=suggestions)

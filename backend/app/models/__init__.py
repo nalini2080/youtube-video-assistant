@@ -3,6 +3,7 @@ from app.models.transcript_chunk import TranscriptChunkRecord
 from app.models.summary import SummaryRecord
 from app.models.user_query import UserQueryRecord
 from app.models.saved_video import SavedVideoRecord
+from app.models.search_quota import SearchQuotaRecord
 
 __all__ = [
     "VideoRecord",
@@ -10,4 +11,5 @@ __all__ = [
     "SummaryRecord",
     "UserQueryRecord",
     "SavedVideoRecord",
+    "SearchQuotaRecord",
 ]
