@@ -9,3 +9,4 @@ sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 pgvector==0.3.6
 clerk-backend-api
+pytest

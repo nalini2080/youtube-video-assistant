@@ -145,10 +145,11 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-4 py-16">
       <div className="w-full max-w-xl">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-sm font-semibold text-slate-400 tracking-wide">VIDEOLENS</span>
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="text-sm text-slate-600 hover:text-slate-900">Sign in</button>
+              <button className="text-sm text-slate-600 hover:text-slate-900 font-medium">Sign in</button>
             </SignInButton>
           </SignedOut>
           <SignedIn>
@@ -236,6 +237,9 @@ function App() {
           </div>
         )}
       </div>
+      <footer className="mt-16 text-center text-xs text-slate-400">
+        VideoLens: transcripts from YouTube, summaries via Gemini.
+      </footer>
     </div>
   )
 }
