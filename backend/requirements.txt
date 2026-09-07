@@ -5,7 +5,7 @@ python-dotenv==1.0.1
 httpx==0.28.1
 youtube-transcript-api>=1.0.0
 google-genai
-sqlalchemy[asyncio]==2.0.36
+sqlalchemy[asyncio]==2.0.52
 asyncpg==0.30.0
 pgvector==0.3.6
 clerk-backend-api
