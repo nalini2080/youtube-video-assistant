@@ -10,7 +10,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # CORS
-    frontend_origin: str = "http://localhost:5173"
+    frontend_origins: str = "http://localhost:5173"
+
+    @property
+    def frontend_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.frontend_origins.split(",") if origin.strip()]
 
     # External services
     youtube_api_key: str = ""
