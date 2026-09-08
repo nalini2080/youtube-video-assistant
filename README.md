@@ -52,3 +52,41 @@ docker run --name videolens-postgres \
 - `YOUTUBE_API_KEY` — [Google Cloud Console](https://console.cloud.google.com)
 - `GEMINI_API_KEY` — [Google AI Studio](https://aistudio.google.com/apikey)
 - `CLERK_SECRET_KEY` / `VITE_CLERK_PUBLISHABLE_KEY` — [clerk.com](https://clerk.com)
+
+## Citations
+Feature creation supported by Claude.
+
+## Known Limitations
+
+### Transcript retrieval on the deployed backend
+
+VideoLens uses `youtube-transcript-api`, an open-source library that fetches
+transcripts without needing an API key. This works reliably when running the
+backend **locally**, but YouTube actively blocks requests from IP ranges
+belonging to major cloud providers (AWS, GCP, Azure, and by extension most
+PaaS platforms built on them, including Render). As a result:
+
+- Running the backend locally (`uvicorn app.main:app --reload`) → transcript
+  retrieval works normally.
+- Running the backend on the live Render deployment → transcript retrieval
+  may fail with a `RequestBlocked` / `IpBlocked` error, since Render's IPs
+  fall into a range YouTube blocks.
+
+This is a known, widely-documented limitation of the library itself (see the
+["Working around IP bans"](https://github.com/jdepoix/youtube-transcript-api?tab=readme-ov-file#working-around-ip-bans-requestblocked-or-ipblocked-exception)
+section of its README), not a bug specific to this project. The maintainer's
+recommended fix is routing requests through a rotating residential proxy
+(e.g., [Webshare](https://www.webshare.io/)) — note that Webshare's *free*
+tier only provides datacenter proxies, which are blocked the same way, so a
+paid residential plan is required for this to actually work in production.
+
+**Workaround paths, if reliable production transcript retrieval is needed:**
+1. Add a paid rotating residential proxy (Webshare or similar) and configure
+   `youtube-transcript-api` to route through it.
+2. Switch to a managed transcript API service (e.g., Supadata, TranscriptAPI)
+   that handles this at the infrastructure level.
+3. Run the backend on your own residential connection / self-hosted machine
+   rather than a cloud PaaS.
+
+For this project's scope, the limitation is left undocumented-but-known
+rather than fixed, since fixing it requires an ongoing paid dependency.
