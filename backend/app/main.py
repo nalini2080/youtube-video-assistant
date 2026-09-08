@@ -46,3 +46,7 @@ async def health_check_db():
         return {"status": "ok"}
     except Exception as exc:
         return {"status": "error", "detail": str(exc)}
+
+@app.get("/")
+def root():
+    return {"message": "VideoLens API is running. See /docs for available endpoints."}
