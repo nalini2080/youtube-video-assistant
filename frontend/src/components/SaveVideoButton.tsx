@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
+import { useAuth, SignedIn } from '@clerk/clerk-react'
 import { saveVideo, unsaveVideo } from '../api/history'
 
 interface SaveVideoButtonProps {
@@ -36,8 +36,8 @@ export function SaveVideoButton({ videoId }: SaveVideoButtonProps) {
                 onClick={handleToggle}
                 disabled={busy}
                 className={`text-xs font-medium px-3 py-1.5 rounded-full border transition disabled:opacity-50 ${saved
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
                     }`}
             >
                 {saved ? '✓ Saved' : '☆ Save video'}
