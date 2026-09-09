@@ -4,6 +4,7 @@ from fastapi import Request, HTTPException
 from clerk_backend_api import Clerk
 from clerk_backend_api.security import authenticate_request
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+import logging; logger = logging.getLogger(__name__)
 
 from app.config import settings
 
@@ -33,8 +34,11 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
         client = _get_clerk_client()
         request_state = client.authenticate_request(
             request,
-            AuthenticateRequestOptions(authorized_parties=[settings.frontend_origin]),
+            AuthenticateRequestOptions(authorized_parties=settings.frontend_origins_list),
         )
+    except Exception as exc:
+        logger.warning(f"Clerk auth check failed: {exc}")
+        return None
     except Exception:
         return None
 
