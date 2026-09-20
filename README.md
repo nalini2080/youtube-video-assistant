@@ -95,3 +95,10 @@ paid residential plan is required for this to actually work in production.
 
 For this project's scope, the limitation is left undocumented-but-known
 rather than fixed, since fixing it requires an ongoing paid dependency.
+
+## Screenshots
+
+![Home](assets/home.png)
+![Video Match Percentage](assets/video-match-percentage.png)
+![Chat Response](assets/chat-response.png)
+![Related Videos](assets/related-videos.png)
