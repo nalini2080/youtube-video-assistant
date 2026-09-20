@@ -5,7 +5,8 @@ actually covers it — before you spend time watching.
 
 ## Demo 
 
-[▶ Watch the demo video](assets/videolens-demo.mp4)
+[▶ Watch the demo video](https://drive.google.com/file/d/1vIpIqAUYnWCY8QJRtw4Z6-neOzRiVHZq/view?usp=sharing)
+[▶ Download the demo video](assets/videolens-demo.mp4)
 
 
 ## Features
