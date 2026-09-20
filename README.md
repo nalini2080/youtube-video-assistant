@@ -3,6 +3,11 @@
 Paste a YouTube link, tell it what you're looking for, and find out if the video
 actually covers it — before you spend time watching.
 
+## Demo 
+
+[▶ Watch the demo video](assets/videolens-demo.mp4)
+
+
 ## Features
 - Video metadata + transcript retrieval
 - AI-generated summaries (overview, key points, topics, takeaways)
